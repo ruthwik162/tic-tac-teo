@@ -107,7 +107,7 @@ const PlayerInputModal = ({ isOpen, onClose, onSubmit, playStartSound }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+          className="fixed inset-0 bg-indigo-300/10 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
         >
           <motion.div
             initial={{ scale: 0.9, y: 20 }}
@@ -120,7 +120,7 @@ const PlayerInputModal = ({ isOpen, onClose, onSubmit, playStartSound }) => {
           >
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 text-purple-300 hover:text-white transition-colors"
+              className="absolute top-4 right-4 cursor-pointer text-purple-300 hover:text-white transition-colors"
             >
               <IoClose size={24} />
             </button>
@@ -177,7 +177,7 @@ const PlayerInputModal = ({ isOpen, onClose, onSubmit, playStartSound }) => {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 type="submit"
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-4 rounded-lg font-medium shadow-lg relative overflow-hidden group"
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 cursor-pointer text-white py-3 px-4 rounded-lg font-medium shadow-lg relative overflow-hidden group"
               >
                 <span className="relative z-10">Start Game</span>
                 <span className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
