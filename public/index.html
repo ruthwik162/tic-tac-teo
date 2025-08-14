@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>OT Scheduler Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script type="text/javascript">
+      (function () {
+        const { protocol, host, pathname, search, hash } = window.location;
+        const pathSegments = pathname.split("/").filter(Boolean);
+
+        // If we are not on the root path and it's not a direct file (like .css, .js)
+        if (
+          pathSegments.length > 0 &&
+          !/\.[a-zA-Z0-9]+$/.test(pathSegments[pathSegments.length - 1])
+        ) {
+          // Store original path in query param
+          const redirectPath = pathname + search + hash;
+          const newUrl = `${protocol}//${host}/?redirect=${encodeURIComponent(
+            redirectPath
+          )}`;
+          if (!window.location.search.includes("redirect=")) {
+            window.location.replace(newUrl);
+          }
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
