@@ -1,869 +1,761 @@
-// src/App.js
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaTimes, FaRegCircle, FaRedo, FaHistory, FaTrophy, FaUser, FaGamepad, FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
-import { GiTicTacToe } from 'react-icons/gi';
-import { IoClose } from 'react-icons/io5';
-import toast, { Toaster } from 'react-hot-toast';
-import useSound from 'use-sound';
-import clickSound from './assets/sounds/click.mp3';
-import winSound from './assets/sounds/win.mp3';
-import drawSound from './assets/sounds/draw.mp3';
-import startSound from './assets/sounds/draw.mp3';
+/**
+ * TicTacToeProSingle_Glass.jsx
+ * Super-polished single-file Tic Tac Toe React component with GitHub-style glass (frosted) UI
+ * Black & White theme, heavy GSAP animations, glass-effect icons, sounds via URLs, confetti, and polished UX.
+ * Now with responsive design and star background
+ */
 
-// Helper function to calculate winner
-const calculateWinner = (squares) => {
-  const lines = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-    [0, 4, 8], [2, 4, 6]             // diagonals
-  ];
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { gsap } from "gsap";
+import { MotionConfig, motion } from "framer-motion";
+import Confetti from "react-confetti";
+import { FaCrown, FaLinkedin } from "react-icons/fa";
 
-  for (let line of lines) {
-    const [a, b, c] = line;
-    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-      return {
-        winner: squares[a],
-        winningLine: line
-      };
+/* ---------- Game Logic ---------- */
+const WIN_COMBOS = [
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7, 8],
+  [0, 3, 6],
+  [1, 4, 7],
+  [2, 5, 8],
+  [0, 4, 8],
+  [2, 4, 6],
+];
+function calculateWinner(board) {
+  for (const [a, b, c] of WIN_COMBOS) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return { winner: board[a], combo: [a, b, c] };
+    }
+  }
+  if (board.every(Boolean)) return { winner: "draw", combo: null };
+  return null;
+}
+function minimax(board, isMax, ai, hu, depth = 0) {
+  const result = calculateWinner(board);
+  if (result) {
+    if (result.winner === ai) return { score: 10 - depth };
+    if (result.winner === hu) return { score: depth - 10 };
+    return { score: 0 };
+  }
+  const avail = board.map((v, i) => (v ? null : i)).filter((v) => v !== null);
+  if (isMax) {
+    let best = { score: -Infinity, move: null };
+    for (let idx of avail) {
+      board[idx] = ai;
+      const res = minimax(board, false, ai, hu, depth + 1);
+      board[idx] = null;
+      if (res.score > best.score) best = { score: res.score, move: idx };
+    }
+    return best;
+  } else {
+    let best = { score: Infinity, move: null };
+    for (let idx of avail) {
+      board[idx] = hu;
+      const res = minimax(board, true, ai, hu, depth + 1);
+      board[idx] = null;
+      if (res.score < best.score) best = { score: res.score, move: idx };
+    }
+    return best;
+  }
+}
+function softmax(scores, t = 1) {
+  const max = Math.max(...scores);
+  const exps = scores.map((s) => Math.exp((s - max) / t));
+  const sum = exps.reduce((a, b) => a + b, 0);
+  return exps.map((e) => e / sum);
+}
+function sampleIndex(probs) {
+  const r = Math.random();
+  let acc = 0;
+  for (let i = 0; i < probs.length; i++) {
+    acc += probs[i];
+    if (r <= acc) return i;
+  }
+  return probs.length - 1;
+}
+function chooseAIMove(origBoard, ai, hu, diff = "medium") {
+  const board = [...origBoard];
+  const avail = board.map((v, i) => (v ? null : i)).filter((v) => v !== null);
+  if (avail.length === 9) return 4;
+  if (diff === "easy") {
+    const scored = avail.map((idx) => {
+      board[idx] = ai;
+      const { score } = minimax(board, false, ai, hu, 0);
+      board[idx] = null;
+      return { idx, score };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    const pool = scored.slice(0, Math.min(4, scored.length));
+    return pool[Math.floor(Math.random() * pool.length)].idx;
+  } else if (diff === "medium") {
+    const scored = avail.map((idx) => {
+      board[idx] = ai;
+      const { score } = minimax(board, false, ai, hu, 0);
+      board[idx] = null;
+      return { idx, score };
+    });
+    const probs = softmax(scored.map((s) => s.score), 1.2);
+    return scored[sampleIndex(probs)].idx;
+  } else {
+    return minimax(board, true, ai, hu, 0).move ?? avail[0];
+  }
+}
+
+/* ---------- Audio helper ---------- */
+function useAudio(urls = {}) {
+  const cache = useRef({});
+  useEffect(() => {
+    for (const [k, url] of Object.entries(urls)) {
+      try {
+        const a = new Audio(url);
+        a.preload = "auto";
+        cache.current[k] = a;
+      } catch (e) { }
+    }
+  }, [urls]);
+  const play = (k, opts = {}) => {
+    const a = cache.current[k];
+    if (!a) return;
+    try {
+      const clone = a.cloneNode();
+      clone.volume = typeof opts.volume === "number" ? opts.volume : 0.9;
+      clone.play().catch(() => { });
+    } catch (e) { }
+  };
+  return play;
+}
+
+/* ---------- Custom Glass Icons ---------- */
+const GlassIcon = ({ children, className = "" }) => (
+  <div className={`glass-icon ${className}`}>
+    {children}
+  </div>
+);
+
+const TimesIcon = ({ className = "", themeDark }) => (
+  <GlassIcon className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  </GlassIcon>
+);
+
+const CircleIcon = ({ className = "", themeDark }) => (
+  <GlassIcon className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2">
+      <circle cx="12" cy="12" r="9"></circle>
+    </svg>
+  </GlassIcon>
+);
+
+const UndoIcon = ({ className = "", themeDark }) => (
+  <GlassIcon className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
+      <path d="M3 10h10a8 8 0 0 1 8 8v0a8 8 0 0 1-8 8H1"></path>
+      <polyline points="3,10 9,4 3,4"></polyline>
+    </svg>
+  </GlassIcon>
+);
+
+const RedoIcon = ({ className = "", themeDark }) => (
+  <GlassIcon className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
+      <path d="M21 10H11a8 8 0 0 0-8 8v0a8 8 0 0 0 8 8h12"></path>
+      <polyline points="21,10 15,4 21,4"></polyline>
+    </svg>
+  </GlassIcon>
+);
+
+const MoonIcon = ({ className = "", themeDark }) => (
+  <GlassIcon className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  </GlassIcon>
+);
+
+const SunIcon = ({ className = "", themeDark }) => (
+  <GlassIcon className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </GlassIcon>
+);
+
+const VolumeUpIcon = ({ className = "", themeDark }) => (
+  <GlassIcon className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+    </svg>
+  </GlassIcon>
+);
+
+const VolumeMuteIcon = ({ className = "", themeDark }) => (
+  <GlassIcon className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+      <line x1="23" y1="9" x2="17" y2="15"></line>
+      <line x1="17" y1="9" x2="23" y2="15"></line>
+    </svg>
+  </GlassIcon>
+);
+
+const CrownIcon = ({ className = "", themeDark }) => (
+  <GlassIcon className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
+      <path d="M12 4L8 10 12 14 16 10 12 4z"></path>
+      <path d="M2 10h20v10H2z"></path>
+    </svg>
+  </GlassIcon>
+);
+
+/* ---------- Star Background Component ---------- */
+const StarBackground = ({ themeDark }) => {
+  const starsRef = useRef(null);
+
+  useEffect(() => {
+    const createStars = () => {
+      const container = starsRef.current;
+      if (!container) return;
+
+      container.innerHTML = '';
+
+      const starColor = themeDark ? 'bg-white/80' : 'bg-indigo-700';
+      const starCount = window.innerWidth < 768 ? 80 : 400;
+
+      for (let i = 0; i < starCount; i++) {
+        const star = document.createElement('div');
+        const size = Math.random() * 2 + 1;
+
+        star.className = `absolute rounded-full ${starColor}`;
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.left = `${Math.random() * 100}%`;
+        star.style.top = `${Math.random() * 100}%`;
+        star.style.opacity = `${Math.random() * 0.8 + 0.2}`;
+        star.style.animation = `starPulse ${2 + Math.random() * 3}s infinite ease-in-out`;
+
+        container.appendChild(star);
+      }
+    };
+
+    createStars();
+
+    const resizeHandler = () => {
+      clearTimeout(window._starResizeTimeout);
+      window._starResizeTimeout = setTimeout(createStars, 300);
+    };
+
+    window.addEventListener('resize', resizeHandler);
+    return () => {
+      window.removeEventListener('resize', resizeHandler);
+    };
+  }, [themeDark]);
+
+  return (
+    <div
+      ref={starsRef}
+      className="absolute inset-0 pointer-events-none z-0 overflow-hidden"
+    />
+  );
+};
+
+/* ---------- Main Component ---------- */
+export default function TicTacToeProSingle() {
+  const HUMAN = "X";
+  const AI = "O";
+
+  const [board, setBoard] = useState(Array(9).fill(null));
+  const [history, setHistory] = useState([Array(9).fill(null)]);
+  const [step, setStep] = useState(0);
+  const [xIsNext, setXIsNext] = useState(true);
+
+  const [mode, setMode] = useState("computer");
+  const [difficulty, setDifficulty] = useState("medium");
+  const [gameOver, setGameOver] = useState(null);
+  const [thinking, setThinking] = useState(false);
+
+  const [themeDark, setThemeDark] = useState(true);
+  const [soundOn, setSoundOn] = useState(true);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  const [autoPlay, setAutoPlay] = useState(false);
+  const [replay, setReplay] = useState(false);
+
+  const [stats, setStats] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("ttt_stats")) || { X: 0, O: 0, draw: 0, matches: 0 };
+    } catch (e) {
+      return { X: 0, O: 0, draw: 0, matches: 0 };
+    }
+  });
+
+  const cellsRef = useRef([]);
+  const confettiRef = useRef([]);
+  const boardRef = useRef(null);
+  const rootRef = useRef(null);
+
+  // Glass particle background for subtle motion
+  const bgParticles = useRef([]);
+
+  const play = useAudio({
+    move: "https://assets.mixkit.co/sfx/download/mixkit-select-click-1109.wav",
+    win: "https://assets.mixkit.co/sfx/download/mixkit-video-game-win-2016.wav",
+    lose: "https://assets.mixkit.co/sfx/download/mixkit-retro-arcade-lose-2027.wav",
+    draw: "https://assets.mixkit.co/sfx/download/mixkit-arcade-retro-game-over-213.wav",
+    reset: "https://assets.mixkit.co/sfx/download/mixkit-game-ball-tap-2073.wav",
+  });
+
+  useEffect(() => {
+    localStorage.setItem("ttt_stats", JSON.stringify(stats));
+  }, [stats]);
+
+  // app open animation (big GSAP timeline)
+  useEffect(() => {
+    if (reducedMotion) return;
+    const tl = gsap.timeline();
+    tl.fromTo(rootRef.current, { opacity: 0, scale: 0.98 }, { opacity: 1, scale: 1, duration: 0.6, ease: "power3.out" });
+    tl.fromTo(".glass-card", { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, stagger: 0.06 }, "-=.4");
+
+    // New grid animation - staggered fade in with slight rotation
+    tl.fromTo(".ttt-board .ttt-cell",
+      {
+        opacity: 0,
+        scale: 1,
+        rotation: 0,
+        y: 20
+      },
+      {
+        opacity: 1,
+        scale: 1,
+        rotation: 0,
+        y: 0,
+        duration: 0.6,
+        stagger: {
+          grid: [3, 3],
+          from: "center",
+          amount: 0.8
+        },
+        ease: "back.out(1.4)"
+      },
+      "-=.3"
+    );
+
+    // subtle background particle motion
+    bgParticles.current.forEach((el, i) => {
+      gsap.to(el, { y: -8 - (i % 3) * 4, duration: 6 + (i % 5), repeat: -1, yoyo: true, ease: "sine.inOut", delay: i * 0.12 });
+    });
+    return () => tl.kill();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reducedMotion]);
+
+  // evaluate winner
+  useEffect(() => {
+    const res = calculateWinner(board);
+    if (res) {
+      setGameOver(res);
+      setStats((s) => ({ ...s, [res.winner]: (s[res.winner] || 0) + 1, matches: s.matches + 1 }));
+      if (soundOn) {
+        if (res.winner === "draw") play("draw");
+        else play("win");
+      }
+      if (res.combo) {
+        // glowing highlight and micro bounce
+        const winners = res.combo.map((i) => cellsRef.current[i]);
+        gsap.to(winners, { boxShadow: themeDark ? "0 8px 30px rgba(255,255,255,0.08)" : "0 8px 30px rgba(0,0,0,0.08)", y: -6, duration: 0.25, repeat: 5, yoyo: true });
+        gsap.to(confettiRef.current, { y: -260, rotation: 360, duration: 1.2, stagger: 0.02, opacity: 1, ease: "power3.out" });
+        setTimeout(() => gsap.to(confettiRef.current, { y: 0, opacity: 0, duration: 0.6, stagger: 0.01 }), 1100);
+      }
+    }
+  }, [board, themeDark, soundOn]);
+
+  // AI move effect
+  useEffect(() => {
+    if (mode !== "computer" || gameOver) return;
+    if (!xIsNext) {
+      setThinking(true);
+      const availCount = board.filter((c) => !c).length;
+      const baseDelay = difficulty === "easy" ? 200 : difficulty === "medium" ? 520 : 840;
+      const delay = baseDelay + Math.min(600, (9 - availCount) * 60);
+      const t = setTimeout(() => {
+        const move = chooseAIMove(board, AI, HUMAN, difficulty);
+        const finalMove = move != null ? move : board.findIndex((c) => c === null);
+        if (finalMove !== -1 && finalMove != null) doMove(finalMove, AI);
+        setThinking(false);
+      }, delay);
+      return () => clearTimeout(t);
+    }
+  }, [board, xIsNext, mode, gameOver, difficulty]);
+
+  function doMove(idx, symbol, { record = true } = {}) {
+    if (board[idx] || gameOver) return false;
+    const nb = [...board];
+    nb[idx] = symbol;
+    setBoard(nb);
+    if (record) {
+      const newHistory = history.slice(0, step + 1).concat([nb]);
+      setHistory(newHistory);
+      setStep(newHistory.length - 1);
+    }
+    setXIsNext(symbol === "X" ? false : true);
+    if (soundOn) play("move");
+    const el = cellsRef.current[idx];
+    if (el && !reducedMotion) {
+      // New cell animation - subtle pulse with glow
+      gsap.fromTo(el,
+        {
+          scale: 0.8,
+          boxShadow: themeDark ? "0 0 20px rgba(255,255,255,0.3)" : "0 0 20px rgba(0,0,0,0.3)"
+        },
+        {
+          scale: 1,
+          boxShadow: "none",
+          duration: 0.4,
+          ease: "back.out(1.6)"
+        }
+      );
+
+      // subtle ripple
+      const ripple = document.createElement("span");
+      ripple.className = "ripple absolute rounded-full pointer-events-none";
+      el.appendChild(ripple);
+      gsap.set(ripple, { width: 10, height: 10, opacity: 0.12, background: themeDark ? "#ffffff" : "#000000", xPercent: -50, yPercent: -50 });
+      gsap.to(ripple, { width: 220, height: 220, opacity: 0, duration: 0.7, ease: "power2.out", onComplete: () => ripple.remove() });
+    }
+    return true;
+  }
+
+  function handleClick(idx) {
+    if (gameOver) return;
+    if (mode === "computer") {
+      if (!xIsNext) return;
+      doMove(idx, HUMAN);
+    } else if (mode === "two-player") {
+      // Fixed: Allow both players to play in hotseat mode
+      doMove(idx, xIsNext ? "X" : "O");
     }
   }
 
-  return { winner: null, winningLine: null };
-};
+  function undo() {
+    if (step === 0) return;
+    const newStep = Math.max(0, step - 1);
+    setStep(newStep);
+    setBoard(history[newStep]);
+    setGameOver(null);
+    if (soundOn) play("reset");
+  }
+  function redo() {
+    if (step >= history.length - 1) return;
+    const newStep = Math.min(history.length - 1, step + 1);
+    setStep(newStep);
+    setBoard(history[newStep]);
+    setGameOver(null);
+  }
 
-// Load/save game history from/to localStorage
-const useGameHistory = () => {
-  const [games, setGames] = useState(() => {
-    const saved = localStorage.getItem('tic-tac-toe-games');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [stats, setStats] = useState(() => {
-    const saved = localStorage.getItem('tic-tac-toe-stats');
-    return saved ? JSON.parse(saved) : { X: 0, O: 0, draws: 0 };
-  });
-
-  useEffect(() => {
-    localStorage.setItem('tic-tac-toe-games', JSON.stringify(games));
-    localStorage.setItem('tic-tac-toe-stats', JSON.stringify(stats));
-  }, [games, stats]);
-
-  const addGame = (game) => {
-    const newGames = [...games, game];
-    setGames(newGames);
-
-    // Update stats
-    const newStats = { ...stats };
-    if (game.winner === 'draw') {
-      newStats.draws += 1;
-    } else if (game.winner) {
-      newStats[game.winner] += 1;
+  function restartRound(preserveScores = true) {
+    if (!reducedMotion) {
+      const tl = gsap.timeline();
+      tl.to(".ttt-board", { opacity: 0.14, duration: 0.08 });
+      tl.to(".ttt-board", { x: -8, duration: 0.06, repeat: 6, yoyo: true }, "-=.02");
+      tl.to(".ttt-board", { opacity: 1, duration: 0.14 });
     }
-    setStats(newStats);
-  };
-
-  const clearHistory = () => {
-    setGames([]);
-    setStats({ X: 0, O: 0, draws: 0 });
-  };
-
-  return { games, stats, addGame, clearHistory };
-};
-
-const PlayerInputModal = ({ isOpen, onClose, onSubmit, playStartSound }) => {
-  const [playerX, setPlayerX] = useState('');
-  const [playerO, setPlayerO] = useState('');
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isOpen]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (playerX.trim() && playerO.trim()) {
-      playStartSound();
-      onSubmit({ playerX, playerO });
-    } else {
-      toast.error('Please enter names for both players', {
-        style: {
-          background: 'rgba(239, 68, 68, 0.9)',
-          color: 'white',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 0 20px rgba(239, 68, 68, 0.5)'
-        }
-      });
-    }
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-indigo-300/10 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
-        >
-          <motion.div
-            initial={{ scale: 0.9, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.9, y: 20 }}
-            className="bg-gray-900 rounded-xl shadow-2xl p-6 w-full max-w-md relative border border-purple-500 border-opacity-30"
-            style={{
-              boxShadow: '0 0 30px rgba(139, 92, 246, 0.5)'
-            }}
-          >
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 cursor-pointer text-purple-300 hover:text-white transition-colors"
-            >
-              <IoClose size={24} />
-            </button>
-
-            <h2 className="text-2xl font-bold mb-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-              Enter Player Names
-            </h2>
-
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-purple-200 mb-1">
-                  Player X Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaUser className="text-blue-400" />
-                  </div>
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={playerX}
-                    onChange={(e) => setPlayerX(e.target.value)}
-                    className="pl-10 w-full px-4 py-2 bg-gray-800 border border-purple-500 border-opacity-30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white placeholder-purple-300 transition-all duration-300"
-                    placeholder="Enter X player name"
-                    style={{
-                      boxShadow: '0 0 10px rgba(96, 165, 250, 0.3)'
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-purple-200 mb-1">
-                  Player O Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaUser className="text-pink-400" />
-                  </div>
-                  <input
-                    type="text"
-                    value={playerO}
-                    onChange={(e) => setPlayerO(e.target.value)}
-                    className="pl-10 w-full px-4 py-2 bg-gray-800 border border-pink-500 border-opacity-30 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-white placeholder-pink-300 transition-all duration-300"
-                    placeholder="Enter O player name"
-                    style={{
-                      boxShadow: '0 0 10px rgba(244, 114, 182, 0.3)'
-                    }}
-                  />
-                </div>
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                type="submit"
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 cursor-pointer text-white py-3 px-4 rounded-lg font-medium shadow-lg relative overflow-hidden group"
-              >
-                <span className="relative z-10">Start Game</span>
-                <span className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                <span
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
-                    animation: 'shimmer 2s infinite'
-                  }}
-                ></span>
-              </motion.button>
-            </form>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
-
-function App() {
-  const [board, setBoard] = useState(Array(9).fill(null));
-  const [isXNext, setIsXNext] = useState(true);
-  const [winnerInfo, setWinnerInfo] = useState({ winner: null, winningLine: null });
-  const [currentGame, setCurrentGame] = useState(null);
-  const [showHistory, setShowHistory] = useState(false);
-  const [showPlayerModal, setShowPlayerModal] = useState(true);
-  const [moves, setMoves] = useState([]);
-  const [isMuted, setIsMuted] = useState(false);
-  const [showStats, setShowStats] = useState(true);
-  const [gameMode, setGameMode] = useState('human'); // 'human' or 'ai'
-
-  const [playClick] = useSound(clickSound, { volume: isMuted ? 0 : 0.5 });
-  const [playWin] = useSound(winSound, { volume: isMuted ? 0 : 0.7 });
-  const [playDraw] = useSound(drawSound, { volume: isMuted ? 0 : 0.7 });
-  const [playStart] = useSound(startSound, { volume: isMuted ? 0 : 0.7 });
-
-  const { games, stats, addGame, clearHistory } = useGameHistory();
-  const [isAITinking, setIsAITinking] = useState(false);
-
-  // AI move logic
-  const makeAIMove = useCallback(() => {
-    if (!isXNext && gameMode === 'ai' && !winnerInfo.winner && currentGame) {
-      // Immediate visual feedback that AI is thinking
-      setIsAITinking(true);
-
-      // Process AI move in the next tick to avoid blocking UI
-      setTimeout(() => {
-        // Simple AI - first find winning move, then blocking move, then random
-        let bestMove = null;
-
-        // Check for winning move
-        for (let i = 0; i < 9; i++) {
-          if (!board[i]) {
-            const newBoard = [...board];
-            newBoard[i] = 'O';
-            const { winner } = calculateWinner(newBoard);
-            if (winner === 'O') {
-              bestMove = i;
-              break;
-            }
-          }
-        }
-
-        // If no winning move, check for blocking move
-        if (bestMove === null) {
-          for (let i = 0; i < 9; i++) {
-            if (!board[i]) {
-              const newBoard = [...board];
-              newBoard[i] = 'X';
-              const { winner } = calculateWinner(newBoard);
-              if (winner === 'X') {
-                bestMove = i;
-                break;
-              }
-            }
-          }
-        }
-
-        // If no winning or blocking move, choose center or random
-        if (bestMove === null) {
-          if (!board[4]) {
-            bestMove = 4; // Prefer center
-          } else {
-            const availableMoves = board.map((cell, idx) => cell ? null : idx).filter(val => val !== null);
-            bestMove = availableMoves[Math.floor(Math.random() * availableMoves.length)];
-          }
-        }
-
-        // Execute the move with minimal delay
-        setTimeout(() => {
-          setIsAITinking(false);
-          if (bestMove !== null) {
-            handleClick(bestMove);
-          }
-        }, 300); // Reduced delay for faster response
-      }, 0);
-    }
-  }, [board, isXNext, gameMode, winnerInfo, currentGame]);
-
-  useEffect(() => {
-    makeAIMove();
-  }, [board, isXNext]);
-
-  // Calculate winner
-  useEffect(() => {
-    const result = calculateWinner(board);
-    if (result.winner) {
-      setWinnerInfo(result);
-      if (result.winner !== winnerInfo.winner && currentGame) {
-        const gameResult = {
-          ...currentGame,
-          winner: result.winner,
-          endTime: new Date().toISOString(),
-          moves: [...moves],
-          board: [...board]
-        };
-        addGame(gameResult);
-
-        // Show toast notification
-        if (result.winner === 'draw') {
-          playDraw();
-          toast.success('Game ended in a draw!', {
-            icon: '🤝',
-            style: {
-              background: 'rgba(30, 41, 59, 0.9)',
-              color: 'white',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)'
-            }
-          });
-        } else {
-          playWin();
-          toast.success(`${currentGame[`player${result.winner}`]} wins!`, {
-            icon: '🏆',
-            style: {
-              background: result.winner === 'X' ? 'rgba(59, 130, 246, 0.9)' : 'rgba(239, 68, 68, 0.9)',
-              color: 'white',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              boxShadow: result.winner === 'X' ?
-                '0 0 20px rgba(59, 130, 246, 0.5)' :
-                '0 0 20px rgba(239, 68, 68, 0.5)'
-            }
-          });
-        }
-      }
-    } else if (!board.includes(null) && !winnerInfo.winner && currentGame) {
-      setWinnerInfo({ winner: 'draw', winningLine: null });
-      const gameResult = {
-        ...currentGame,
-        winner: 'draw',
-        endTime: new Date().toISOString(),
-        moves: [...moves],
-        board: [...board]
-      };
-      addGame(gameResult);
-      playDraw();
-      toast.success('Game ended in a draw!', {
-        icon: '🤝',
-        style: {
-          background: 'rgba(30, 41, 59, 0.9)',
-          color: 'white',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)'
-        }
-      });
-    }
-  }, [board]);
-
-  const startNewGame = (players) => {
-    setCurrentGame({
-      playerX: players.playerX,
-      playerO: gameMode === 'ai' ? 'Computer' : players.playerO,
-      startTime: new Date().toISOString(),
-      winner: null,
-      endTime: null
-    });
-    setShowPlayerModal(false);
-    resetGame();
-    toast.success(`Game started! ${players.playerX} (X) vs ${gameMode === 'ai' ? 'Computer' : players.playerO} (O)`, {
-      icon: '🎮',
-      style: {
-        background: 'rgba(79, 70, 229, 0.9)',
-        color: 'white',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        backdropFilter: 'blur(10px)',
-        boxShadow: '0 0 20px rgba(79, 70, 229, 0.5)'
-      }
-    });
-  };
-
-  const handleClick = (index) => {
-    if (board[index] || winnerInfo.winner || !currentGame) return;
-    if (gameMode === 'ai' && !isXNext) return; // Prevent player from clicking during AI turn
-
-    playClick();
-    const newBoard = [...board];
-    newBoard[index] = isXNext ? 'X' : 'O';
-    setBoard(newBoard);
-    setIsXNext(!isXNext);
-
-    const newMove = {
-      player: isXNext ? 'X' : 'O',
-      position: index,
-      board: [...newBoard],
-      timestamp: new Date().toISOString()
-    };
-
-    setMoves([...moves, newMove]);
-  };
-
-  const resetGame = () => {
     setBoard(Array(9).fill(null));
-    setIsXNext(true);
-    setWinnerInfo({ winner: null, winningLine: null });
-    setMoves([]);
-  };
+    setHistory([Array(9).fill(null)]);
+    setStep(0);
+    setXIsNext(true);
+    setGameOver(null);
+    setThinking(false);
+    if (!preserveScores) setStats({ X: 0, O: 0, draw: 0, matches: 0 });
+    if (soundOn) play("reset");
+  }
 
-  const startNewGameWithPlayers = () => {
-    setShowPlayerModal(true);
-    resetGame();
-  };
+  // replay history
+  useEffect(() => {
+    if (!replay) return;
+    let i = 0;
+    setBoard(history[0] || Array(9).fill(null));
+    const id = setInterval(() => {
+      i++;
+      if (i >= history.length) {
+        clearInterval(id);
+        setReplay(false);
+        return;
+      }
+      setBoard(history[i]);
+    }, 420);
+    return () => clearInterval(id);
+  }, [replay]);
 
-  const renderSquare = (index) => {
-    const isWinningSquare = winnerInfo.winningLine?.includes(index);
-    const isActive = !board[index] && !winnerInfo.winner && currentGame;
-    const isAITurn = gameMode === 'ai' && !isXNext;
+  // auto-play
+  useEffect(() => {
+    if (!autoPlay) return;
+    restartRound(true);
+    let alive = true;
+    const run = async () => {
+      while (alive) {
+        const avail = board.map((v, i) => (v ? null : i)).filter((v) => v !== null);
+        if (!avail.length) break;
+        if (gameOver) break;
+        const move = chooseAIMove(board, xIsNext ? AI : HUMAN, xIsNext ? HUMAN : AI, difficulty);
+        doMove(move, xIsNext ? AI : HUMAN);
+        await new Promise((r) => setTimeout(r, 420));
+      }
+    };
+    run();
+    return () => (alive = false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPlay]);
 
-    return (
-      <motion.button
-        whileHover={isActive && !isAITurn ? {
-          scale: 1.1,
-          boxShadow: isXNext ?
-            '0 0 20px rgba(59, 130, 246, 0.7)' :
-            '0 0 20px rgba(239, 68, 68, 0.7)'
-        } : {}}
-        whileTap={isActive && !isAITurn ? { scale: 0.95 } : {}}
-        className={`w-20 h-20 md:w-24 md:h-24 border-2 flex items-center justify-center rounded-lg relative overflow-hidden transition-all duration-300
-          ${isWinningSquare ? 'bg-gradient-to-br from-yellow-100 to-yellow-200' : 'bg-gray-900'}
-          ${isActive ? 'cursor-pointer hover:bg-gray-800' : 'cursor-default'}
-          ${board[index] === 'X' ? 'border-blue-500' : board[index] === 'O' ? 'border-pink-500' : 'border-gray-700'}
-        `}
-        onClick={() => handleClick(index)}
-        disabled={!!winnerInfo.winner || !currentGame || isAITurn}
-        style={{
-          boxShadow: isWinningSquare ? '0 0 25px rgba(234, 179, 8, 0.8)' : 'none'
-        }}
-      >
-        {isWinningSquare && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute inset-0 rounded-lg"
-            style={{
-              background: 'radial-gradient(circle at center, rgba(234, 179, 8, 0.4) 0%, rgba(234, 179, 8, 0) 70%)',
-              zIndex: 0
-            }}
-          />
-        )}
+  const hint = useMemo(() => {
+    if (gameOver) return null;
+    const cur = xIsNext ? HUMAN : AI;
+    const other = xIsNext ? AI : HUMAN;
+    return chooseAIMove(board, cur, other, "hard");
+  }, [board, xIsNext, gameOver]);
 
-        {isActive && !isAITurn && (
-          <motion.div
-            className={`absolute inset-0 opacity-0 hover:opacity-20 transition-opacity ${isXNext ? 'bg-blue-500' : 'bg-pink-500'
-              }`}
-          />
-        )}
+  // keyboard
+  useEffect(() => {
+    function onKey(e) {
+      if (!isNaN(e.key) && e.key !== "0") {
+        const idx = parseInt(e.key, 10) - 1;
+        handleClick(idx);
+      }
+      if (e.key === "z" && (e.ctrlKey || e.metaKey)) undo();
+      if (e.key === "y" && (e.ctrlKey || e.metaKey)) redo();
+      if (e.key === "r") restartRound(true);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [board, xIsNext, gameOver, step, history]);
 
-        <AnimatePresence>
-          {board[index] && (
-            <motion.div
-              key={index}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{
-                scale: 1,
-                opacity: 1,
-                rotate: board[index] === 'X' ? [0, 10, -10, 0] : 0
-              }}
-              transition={{
-                duration: 0.3,
-                rotate: { repeat: board[index] === 'X' ? 1 : 0, duration: 0.5 }
-              }}
-              className={`relative z-10 ${board[index] === 'X' ? 'text-blue-400' : 'text-pink-400'}`}
-            >
-              {board[index] === 'X' ? (
-                <FaTimes className="text-4xl md:text-5xl" />
-              ) : (
-                <FaRegCircle className="text-3xl md:text-4xl" />
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.button>
-    );
-  };
+  const percent = (a, b) => (b === 0 ? "0%" : `${Math.round((a / b) * 100)}%`);
+
+  // UI helpers (black & white)
+  const bgClasses = themeDark ? "bg-black text-white" : "bg-white text-black";
+  const cardBg = themeDark ? "bg-white/35 backdrop-blur-md" : "bg-black/6 backdrop-blur-md";
+  const cellBorder = themeDark ? "border-white/12" : "border-black/12";
+  const iconColor = themeDark ? "#ffffff" : "#000000";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center p-4 relative overflow-x-hidden">
-      <style>
-        {`
-          @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-          }
-          .neon-text {
-            text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #e60073, 0 0 40px #e60073;
-          }
-          .neon-pulse {
-            animation: pulse 2s infinite;
-          }
-          @keyframes pulse {
-            0% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.5); }
-            50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.8); }
-            100% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.5); }
-          }
-        `}
-      </style>
+    <MotionConfig reducedMotion={reducedMotion ? "user" : "never"}>
+      <div ref={rootRef} className={`${bgClasses} min-h-screen flex items-center justify-center p-4 md:p-6 relative overflow-hidden`}>
 
-      <Toaster
-        position="top-center"
-        reverseOrder={false}
-        toastOptions={{
-          className: 'backdrop-blur-sm'
-        }}
-      />
+        {/* Star Background */}
+        <StarBackground themeDark={themeDark} />
 
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <motion.div
-            key={i}
-            animate={{
-              x: [0, Math.random() * 100 - 50],
-              y: [0, Math.random() * 100 - 50],
-              opacity: [0.1, 0.3, 0.1]
-            }}
-            transition={{
-              duration: Math.random() * 10 + 10,
-              repeat: Infinity,
-              repeatType: 'reverse'
-            }}
-            className="absolute rounded-full bg-purple-500 opacity-10"
-            style={{
-              width: Math.random() * 200 + 50,
-              height: Math.random() * 200 + 50,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              filter: 'blur(40px)'
-            }}
-          />
-        ))}
-      </div>
+        {/* subtle glass particles */}
+        <div className="absolute inset-0 pointer-events-none z-0">
+          {[...Array(12)].map((_, i) => (
+            <div key={i} ref={(el) => (bgParticles.current[i] = el)} style={{ left: `${(i + 1) * 7}%`, top: `${20 + (i % 3) * 6}%` }} className={`absolute w-28 h-28 rounded-full ${themeDark ? 'bg-white/2' : 'bg-black/2'} filter blur-2xl opacity-40`} />
+          ))}
+        </div>
 
-      <PlayerInputModal
-        isOpen={showPlayerModal}
-        onClose={() => setShowPlayerModal(false)}
-        onSubmit={startNewGame}
-        playStartSound={playStart}
-      />
+        <div className="absolute inset-0 bg-grid-pattern opacity-10 dark:opacity-5 pointer-events-none" />
+        <div className="border border-gray-300/60 bg-white/30 p-2 md:p-4 dark:bg-indigo-400/25 dark:shadow-[0_0_70px_rgba(124,58,237,0.2)] rounded-2xl backdrop-blur-sm">
 
-      <motion.div
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="flex items-center mb-6 md:mb-8 relative z-10"
-      >
-        <GiTicTacToe className="text-4xl md:text-5xl text-purple-400 mr-3" />
-        <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-          NEON TIC TAC TOE
-        </h1>
-      </motion.div>
+          <div className={`glass-card ${cardBg} rounded-3xl shadow-2xl border ${cellBorder} p-4 md:p-6 dark:bg-gray-900 dark:shadow-[0_0_70px_rgba(124,58,237,10)] rounded-xl shadow-md relative z-20 w-full max-w-4xl`}>
 
-      <div className="flex gap-4 mb-4 z-10">
-        <button
-          onClick={() => setGameMode('human')}
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${gameMode === 'human' ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30' : 'bg-gray-800 text-gray-300'}`}
-        >
-          Player vs Player
-        </button>
-        <button
-          onClick={() => setGameMode('ai')}
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${gameMode === 'ai' ? 'bg-pink-600 text-white shadow-lg shadow-pink-500/30' : 'bg-gray-800 text-gray-300'}`}
-        >
-          Player vs AI
-        </button>
-      </div>
+            <div className="flex flex-col md:flex-row md:items-center text-black dark:text-white justify-between mb-4 gap-3">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-xl ${themeDark ? 'bg-white/8' : 'bg-black/8'} border ${cellBorder}`}>
+                  <FaCrown themeDark={themeDark} />
+                </div>
+                <h1 className={`ttt-title text-xl md:text-2xl font-bold tracking-tight ${themeDark ? 'text-white' : 'text-white'}`}>Tic Tac Toe</h1>
+              </div>
 
-      {currentGame && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mb-4 bg-gray-800 p-4 rounded-xl shadow-lg w-full max-w-md border border-gray-700 relative z-10"
-          style={{
-            boxShadow: '0 0 15px rgba(139, 92, 246, 0.3)'
-          }}
-        >
-          <div className="flex justify-between items-center">
-            <div className={`flex items-center transition-all ${isXNext && !winnerInfo.winner ? 'text-blue-400 font-semibold' : 'text-gray-400'}`}>
-              <FaUser className="mr-2" />
-              <span>{currentGame.playerX}</span>
-              <span className="ml-2 text-xs bg-blue-900 text-blue-300 px-2 py-1 rounded">X</span>
-            </div>
-            <div className="text-gray-500 mx-2">vs</div>
-            <div className={`flex items-center transition-all ${!isXNext && !winnerInfo.winner ? 'text-pink-400 font-semibold' : 'text-gray-400'}`}>
-              <FaUser className="mr-2" />
-              <span>{currentGame.playerO}</span>
-              <span className="ml-2 text-xs bg-pink-900 text-pink-300 px-2 py-1 rounded">O</span>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {showStats && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gray-800 p-4 rounded-xl shadow-lg mb-6 md:mb-8 w-full max-w-md border border-gray-700 relative z-10"
-          style={{
-            boxShadow: '0 0 15px rgba(99, 102, 241, 0.3)'
-          }}
-        >
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 flex items-center">
-              <FaTrophy className="mr-2 text-yellow-400" /> Game Stats
-            </h2>
-            <button
-              onClick={() => setIsMuted(!isMuted)}
-              className="text-gray-400 hover:text-white transition-colors"
-            >
-              {isMuted ? <FaVolumeMute /> : <FaVolumeUp />}
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="flex flex-col items-center p-3 bg-gray-900 rounded-lg border border-blue-500 border-opacity-30">
-              <span className="text-blue-400 font-bold text-2xl">{stats.X}</span>
-              <span className="text-sm text-gray-400">X Wins</span>
-            </div>
-            <div className="flex flex-col items-center p-3 bg-gray-900 rounded-lg border border-gray-700">
-              <span className="text-gray-300 font-bold text-2xl">{stats.draws}</span>
-              <span className="text-sm text-gray-400">Draws</span>
-            </div>
-            <div className="flex flex-col items-center p-3 bg-gray-900 rounded-lg border border-pink-500 border-opacity-30">
-              <span className="text-pink-400 font-bold text-2xl">{stats.O}</span>
-              <span className="text-sm text-gray-400">O Wins</span>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="bg-gray-800 p-4 rounded-xl shadow-lg mb-6 md:mb-8 w-full max-w-md flex justify-center border border-gray-700 relative z-10"
-        style={{
-          boxShadow: '0 0 15px rgba(236, 72, 153, 0.3)'
-        }}
-      >
-        {winnerInfo.winner ? (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className={`flex items-center ${winnerInfo.winner === 'draw' ? 'text-gray-300' : winnerInfo.winner === 'X' ? 'text-blue-400' : 'text-pink-400'}`}
-          >
-            {winnerInfo.winner === 'draw' ? (
-              <>
-                <span className="text-xl font-semibold">It's a draw!</span>
-              </>
-            ) : (
-              <>
-                <motion.div
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    rotate: [0, 10, -10, 0]
-                  }}
-                  transition={{
-                    duration: 1,
-                    repeat: Infinity,
-                    repeatDelay: 2
-                  }}
-                >
-                  <FaTrophy className="mr-2 text-yellow-400" />
-                </motion.div>
-                <span className="text-xl font-semibold">
-                  {currentGame[`player${winnerInfo.winner}`]} wins!
-                </span>
-              </>
-            )}
-          </motion.div>
-        ) : currentGame ? (
-          <motion.div
-            animate={{
-              x: [0, 5, -5, 0],
-              textShadow: isXNext ?
-                '0 0 10px rgba(59, 130, 246, 0.7)' :
-                '0 0 10px rgba(236, 72, 153, 0.7)'
-            }}
-            transition={{ repeat: Infinity, duration: 2 }}
-            className={`flex items-center ${isXNext ? 'text-blue-400' : 'text-pink-400'}`}
-          >
-            <span className="text-xl font-semibold">
-              {isXNext ? currentGame.playerX : currentGame.playerO}'s turn
-            </span>
-            {gameMode === 'ai' && !isXNext && (
-              <motion.span
-                className="ml-2 text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded"
-                animate={{ opacity: isAITinking ? [0.6, 1, 0.6] : 0 }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              >
-                {isAITinking ? 'AI thinking...' : ''}
-              </motion.span>
-            )}
-          </motion.div>
-        ) : (
-          <div className="text-gray-500">No active game</div>
-        )}
-      </motion.div>
-        <h1 className='font-bold md:text-5xl text-indigo-300 mt-10 text-3xl'>Tic Tac Teo game</h1>
-      <div className="grid grid-cols-3 gap-3 py-25 mb-6 md:mb-8 relative z-10">
-        {Array(9).fill(null).map((_, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-          >
-            {renderSquare(index)}
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-3 md:gap-4 mb-6 md:mb-8 justify-center relative z-10">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={startNewGameWithPlayers}
-          className="px-4 md:px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg shadow-lg font-medium flex items-center relative overflow-hidden group"
-        >
-          <span className="relative z-10 flex items-center">
-            <FaUser className="mr-2" /> New Game
-          </span>
-          <span className="absolute inset-0 bg-gradient-to-r from-purple-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-        </motion.button>
-
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setShowHistory(!showHistory)}
-          className="px-4 md:px-6 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg shadow-lg font-medium flex items-center relative overflow-hidden group"
-        >
-          <span className="relative z-10 flex items-center">
-            <FaHistory className="mr-2" /> {showHistory ? 'Hide' : 'Show'} History
-          </span>
-          <span className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-        </motion.button>
-
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setShowStats(!showStats)}
-          className="px-4 md:px-6 py-2 bg-gradient-to-r from-gray-700 to-gray-600 text-white rounded-lg shadow-lg font-medium flex items-center relative overflow-hidden group"
-        >
-          <span className="relative z-10 flex items-center">
-            <FaTrophy className="mr-2" /> {showStats ? 'Hide' : 'Show'} Stats
-          </span>
-          <span className="absolute inset-0 bg-gradient-to-r from-gray-600 to-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-        </motion.button>
-
-        {currentGame && (
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={resetGame}
-            className="px-4 md:px-6 py-2 bg-gradient-to-r from-gray-700 to-gray-600 text-white rounded-lg shadow-lg font-medium flex items-center relative overflow-hidden group"
-          >
-            <span className="relative z-10 flex items-center">
-              <FaRedo className="mr-2" /> Reset Board
-            </span>
-            <span className="absolute inset-0 bg-gradient-to-r from-gray-600 to-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-          </motion.button>
-        )}
-      </div>
-
-      <AnimatePresence>
-        {showHistory && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="w-full max-w-2xl bg-gray-800 rounded-xl shadow-lg p-4 mb-8 overflow-hidden border border-gray-700 relative z-10"
-            style={{
-              boxShadow: '0 0 20px rgba(139, 92, 246, 0.3)'
-            }}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold flex items-center text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                <FaGamepad className="mr-2 text-purple-400" /> Game History
-              </h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => clearHistory()}
-                  className="text-sm bg-red-900 hover:bg-red-800 text-red-100 px-3 py-1 rounded-lg transition-colors flex items-center"
-                >
-                  Clear All
+              <div className="flex items-center gap-2 self-end md:self-auto">
+                <button onClick={() => setSoundOn((s) => !s)} className={`p-2 rounded-md ${themeDark ? 'bg-white/6' : 'bg-white/60'}`} aria-label="toggle sound">
+                  {soundOn ? <VolumeUpIcon themeDark={themeDark} /> : <VolumeMuteIcon themeDark={themeDark} />}
                 </button>
-                <button
-                  onClick={() => setShowHistory(false)}
-                  className="text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1 rounded-lg transition-colors flex items-center"
-                >
-                  Close
+                <button onClick={() => setThemeDark((s) => !s)} className={`p-2 rounded-md ${themeDark ? 'bg-white/6' : 'bg-white/60'}`} aria-label="toggle theme">
+                  {themeDark ? <SunIcon themeDark={themeDark} /> : <MoonIcon themeDark={themeDark} />}
                 </button>
               </div>
             </div>
 
-            {games.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-gray-500 mb-2">No games recorded yet</p>
-                <p className="text-sm text-gray-400">Play a game to see it here</p>
+            {/* Controls */}
+            <div className="flex flex-col md:flex-row md:flex-wrap text-black dark:text-white items-stretch md:items-center gap-3 mb-6 ttt-panel">
+              <div className="flex gap-2 flex-wrap">
+                <label className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer ${themeDark ? 'bg-white/6' : 'bg-white/60'}`}>
+                  <input type="radio" checked={mode === "two-player"} onChange={() => { setMode("two-player"); restartRound(); }} />
+                  <span className={themeDark ? 'text-white' : 'text-black'}>Hotseat</span>
+                </label>
+                <label className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer ${themeDark ? 'bg-white/6' : 'bg-white/60'}`}>
+                  <input type="radio" checked={mode === "computer"} onChange={() => { setMode("computer"); restartRound(); }} />
+                  <span className={themeDark ? 'text-white' : 'text-black'}>Vs Computer</span>
+                </label>
+                <label className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer ${themeDark ? 'bg-white/6' : 'bg-white/60'}`}>
+                  <input type="radio" checked={mode === "online"} onChange={() => { setMode("online"); restartRound(); }} />
+                  <span className={themeDark ? 'text-white' : 'text-black'}>Online</span>
+                </label>
               </div>
-            ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-                {games.slice().reverse().map((game, index) => (
-                  <motion.div
-                    key={game.startTime}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={`p-4 rounded-lg border ${game.winner === 'X' ? 'border-blue-900 bg-blue-900 bg-opacity-20' :
-                        game.winner === 'O' ? 'border-pink-900 bg-pink-900 bg-opacity-20' :
-                          'border-gray-700 bg-gray-700 bg-opacity-20'
-                      }`}
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <select value={difficulty} onChange={(e) => { setDifficulty(e.target.value); restartRound(); }} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/6' : 'bg-black/6'}`}>
+                  <option value="easy">Easy</option>
+                  <option value="medium">Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+
+                <button onClick={() => restartRound()} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/8 text-white' : 'bg-black text-white'}`}>Restart</button>
+                <button onClick={() => { setStats({ X: 0, O: 0, draw: 0, matches: 0 }); localStorage.removeItem('ttt_stats'); }} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/8 text-white' : 'bg-black text-white'}`}>Reset Stats</button>
+
+                <button onClick={() => undo()} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/6' : 'bg-white/10'} flex items-center gap-2`}><UndoIcon themeDark={themeDark} /><span className="hidden md:inline">Undo</span></button>
+                <button onClick={() => redo()} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/6' : 'bg-white/10'} flex items-center gap-2`}><RedoIcon themeDark={themeDark} /><span className="hidden md:inline">Redo</span></button>
+
+                <button onClick={() => setReplay(true)} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/8 text-white' : 'bg-black text-white'}`}>Replay</button>
+                <button onClick={() => setAutoPlay((s) => !s)} className={`px-3 py-2 rounded-md ${autoPlay ? 'bg-red-600 text-white' : themeDark ? 'bg-white/6' : 'bg-black/6'}`}>{autoPlay ? 'Stop' : 'AI Auto'}</button>
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              {/* Board */}
+              <div className={`ttt-board grid grid-cols-3 items-center justify-center mx-auto  md:mt-15 gap-3 md:gap-4 p-3 md:p-5 rounded-xl ${themeDark ? 'bg-black/10' : 'bg-white/8'} ${cellBorder} w-full md:w-auto`} ref={boardRef}>
+                {board.map((cell, i) => (
+                  <motion.button
+                    key={i}
+                    ref={(el) => (cellsRef.current[i] = el)}
+                    onClick={() => handleClick(i)}
+                    whileTap={{ scale: 0.95 }}
+                    className={`ttt-cell relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl font-extrabold rounded-lg ${themeDark ? 'bg-black/60' : 'bg-white/40'} border ${cellBorder} transition-transform ${!cell && !gameOver ? 'hover:scale-105 cursor-pointer' : 'opacity-90 cursor-default'}`}
+                    aria-label={`Cell ${i + 1}`}
+                    disabled={!!cell || !!gameOver || (mode === 'computer' && !xIsNext)}
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <div className="font-medium">
-                          <span className={game.winner === 'X' ? 'text-blue-400' : 'text-gray-400'}>{game.playerX}</span>
-                          <span className="mx-2 text-gray-500">vs</span>
-                          <span className={game.winner === 'O' ? 'text-pink-400' : 'text-gray-400'}>{game.playerO}</span>
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {new Date(game.startTime).toLocaleString()}
-                        </div>
-                      </div>
-                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${game.winner === 'X' ? 'bg-blue-900 text-blue-300' :
-                          game.winner === 'O' ? 'bg-pink-900 text-pink-300' :
-                            'bg-gray-700 text-gray-300'
-                        }`}>
-                        {game.winner === 'draw' ? 'Draw' : `${game.winner} won`}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-5 gap-1 mb-2">
-                      {game.board.map((cell, i) => (
-                        <div
-                          key={i}
-                          className={`w-6 h-6 flex items-center justify-center text-xs rounded ${cell === 'X' ? 'bg-blue-900 text-blue-300' :
-                              cell === 'O' ? 'bg-pink-900 text-pink-300' :
-                                'bg-gray-700 text-gray-500'
-                            }`}
-                        >
-                          {cell || '-'}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {game.moves.length} moves • Duration: {game.endTime ?
-                        `${Math.round((new Date(game.endTime) - new Date(game.startTime)) / 1000)}s` :
-                        'N/A'}
-                    </div>
-                  </motion.div>
+                    {cell ? (
+                      <span style={{ color: themeDark ? '#fff' : '#000' }} className="flex items-center justify-center">
+                        <span className="sr-only">{cell}</span>
+                        {cell === 'X' ?
+                          <TimesIcon className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" themeDark={themeDark} /> :
+                          <CircleIcon className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" themeDark={themeDark} />
+                        }
+                      </span>
+                    ) : (
+                      <span className={`${themeDark ? 'text-white/40' : 'text-black/30'}`}>{hint === i ? '' : ''}</span>
+                    )}
+                  </motion.button>
                 ))}
               </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      <motion.div
-        className="absolute bottom-4 right-4 text-gray-500 text-sm z-10"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.7 }}
-        whileHover={{ opacity: 1 }}
-      >
-        <a href="https://github.com/ruthwik162" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors">
-          GitHub
-        </a>
-      </motion.div>
-    </div>
+              {/* Sidebar */}
+              <div className="flex-1 min-w-0 w-full md:min-w-[240px]">
+                <div className="mb-3 ttt-panel">
+                  <div className={`p-3 rounded-lg ${themeDark ? 'bg-black/10' : 'bg-white/50'} border ${cellBorder}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${xIsNext ? (themeDark ? 'bg-white' : 'bg-black') : (themeDark ? 'bg-white/50' : 'bg-black/50')}`} />
+                        <div className={`font-medium ${themeDark ? 'text-white' : 'text-black'}`}>Turn: <span className={themeDark ? 'text-white' : 'text-black'}>{xIsNext ? 'X' : 'O'}</span></div>
+                      </div>
+                      <div className={`text-sm ${themeDark ? 'text-white/60' : 'text-black/60'}`}>{gameOver ? (gameOver.winner === 'draw' ? 'Draw' : `${gameOver.winner} wins`) : 'In progress'}</div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className={`p-2 rounded-md text-center ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'}`}>
+                        <div className="font-bold">X</div>
+                        <div>{stats.X}</div>
+                      </div>
+                      <div className={`p-2 rounded-md text-center ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'}`}>
+                        <div className="font-bold">O</div>
+                        <div>{stats.O}</div>
+                      </div>
+                      <div className={`p-2 rounded-md text-center ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'}`}>
+                        <div className="font-bold">Draws</div>
+                        <div>{stats.draw}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-3 ttt-panel">
+                  <div className={`p-3 rounded-lg ${themeDark ? 'bg-black/10' : 'bg-white/50'} border ${cellBorder}`}>
+                    <div className="flex items-center justify-between mb-2"><strong className={themeDark ? 'text-white' : 'text-black'}>History</strong><small className={`text-sm ${themeDark ? 'text-white/60' : 'text-black/60'}`}>Step {step}/{history.length - 1}</small></div>
+                    <input type="range" min={0} max={history.length - 1} value={step} onChange={(e) => { const s = Number(e.target.value); setStep(s); setBoard(history[s]); setGameOver(null); }} className="w-full" />
+
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {history.map((h, idx) => (
+                        <button key={idx} onClick={() => { setStep(idx); setBoard(history[idx]); setGameOver(null); }} className={`px-2 py-1 text-sm rounded ${idx === step ? (themeDark ? 'bg-white text-black' : 'bg-black text-white') : (themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black')}`}>#{idx}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-3 ttt-panel">
+                  <div className={`p-3 rounded-lg ${themeDark ? 'bg-black/10' : 'bg-white/50'} border ${cellBorder}`}>
+                    <div className="flex items-center justify-between mb-2"><strong className={themeDark ? 'text-white' : 'text-black'}>Options</strong></div>
+                    <div className="flex gap-2 flex-wrap">
+                      <button onClick={() => soundOn && play('move')} className={`px-3 py-2 rounded ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'}`}>Test Move</button>
+                      <button onClick={() => { setReplay(true); }} className={`px-3 py-2 rounded ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'}`}>Replay Match</button>
+                      <button onClick={() => { setBoard(history[history.length - 1]); setStep(history.length - 1); }} className={`px-3 py-2 rounded ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'}`}>Jump to End</button>
+                      <button onClick={() => { /* hint noop */ }} className={`px-3 py-2 rounded ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'}`}>Hint</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-3 ttt-panel">
+                  <div className={`p-3 rounded-lg ${themeDark ? 'bg-black/10' : 'bg-white/50'} border ${cellBorder}`}>
+                    <strong className={themeDark ? 'text-white' : 'text-black'}>Leaderboard</strong>
+                    <div className={`mt-2 text-sm ${themeDark ? 'text-white/60' : 'text-black/60'}`}>Matches: {stats.matches} • X win%: {percent(stats.X, stats.matches)} • O win%: {percent(stats.O, stats.matches)}</div>
+                  </div>
+                </div>
+
+                <div className={`text-xs ${themeDark ? 'text-white' : 'text-white'}`}>Controls: keys 1-9 to play, Ctrl/Cmd+Z undo, R restart.</div>
+              </div>
+            </div>
+
+            {/* win/draw banner */}
+            <div className="mt-6 flex items-center flex-row justify-center">
+              {gameOver && (
+                <div className={`px-4 py-2 rounded-full ${themeDark ? 'bg-white/8 text-white' : 'bg-black text-white'}`}>{gameOver.winner === 'draw' ? 'It\'s a Draw!' : `${gameOver.winner} Wins!`}</div>
+              )}
+            </div>
+              <div className="h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent w-full mt-2 md:mt-2 origin-left">
+              </div>
+            <br />
+            <footer className="mt-6 flex items-center text-black dark:text-white justify-center gap-5 text-center text-sm opacity-80">
+              copyright &copy; {new Date().getFullYear()} {" "}
+              <a
+                href="https://linkedin.com/in/nagaruthwikmerugu/"
+                target="_blank"
+                rel="noreferrer"
+                className={`underline flex items-center text-black dark:text-white  justify-center gap-2 ${themeDark ? "text-white" : "text-black"}`}
+              >
+                <FaLinkedin/> Nagaruthwik Merugu
+              </a>
+            </footer>
+          </div>
+
+        </div>
+
+
+
+        {/* Confetti canvas (react-confetti) */}
+        {gameOver?.winner && gameOver.winner !== 'draw' && <Confetti recycle={false} numberOfPieces={220} />}
+
+        {/* CSS for star animation */}
+        <style jsx>{`
+          @keyframes starPulse {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+          }
+          .glass-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 1em;
+            height: 1em;
+          }
+        `}</style>
+      </div>
+    </MotionConfig>
   );
 }
-
-export default App;
