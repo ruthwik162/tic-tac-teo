@@ -559,9 +559,9 @@ export default function TicTacToeProSingle() {
             <div className="flex flex-col md:flex-row md:items-center text-black dark:text-white justify-between mb-4 gap-3">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-xl ${themeDark ? 'bg-white/8' : 'bg-black/8'} border ${cellBorder}`}>
-                  <FaCrown color={themeDark ? "#ffffff" : "#000000"} />
+                  <FaCrown color={themeDark ? "#ffffff" : "#000000"} size={28} />
                 </div>
-                <h1 className={`ttt-title text-xl md:text-2xl font-bold tracking-tight ${themeDark ? 'text-white' : 'text-black'}`}>Tic Tac Toe</h1>
+                <h1 className={`ttt-title text-5xl md:text-2xl font-bold tracking-tight ${themeDark ? 'text-white' : 'text-black'}`}>Tic Tac Toe</h1>
               </div>
 
               <div className="flex items-center gap-2 self-end md:self-auto">
@@ -601,7 +601,7 @@ export default function TicTacToeProSingle() {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
-                <select value={difficulty} onChange={(e) => { setDifficulty(e.target.value); restartRound(); }} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/6 text-black' : 'bg-black text-white'} focus:outline-none focus:ring-0`}>
+                <select value={difficulty} onChange={(e) => { setDifficulty(e.target.value); restartRound(); }} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/6 text-white' : 'bg-black text-white'} focus:outline-none focus:ring-0`}>
                   <option value="easy">Easy</option>
                   <option value="medium">Medium</option>
                   <option value="hard">Hard</option>
@@ -632,14 +632,14 @@ export default function TicTacToeProSingle() {
 
             <div className="flex flex-col md:flex-row gap-6 items-start">
               {/* Board */}
-              <div className={`ttt-board grid grid-cols-3 items-center justify-center mx-auto md:mt-15 gap-3 md:gap-4 p-3 md:p-5 rounded-xl ${themeDark ? 'bg-black/10' : 'bg-black/5'} ${cellBorder} w-full md:w-auto`} ref={boardRef}>
+              <div className={`ttt-board grid grid-cols-3  items-center justify-center mx-auto md:mt-15 gap-3 md:gap-4 p-3 md:p-5 rounded-xl ${themeDark ? 'bg-black/10' : 'bg-black/5'} ${cellBorder} w-full md:w-auto`} ref={boardRef}>
                 {board.map((cell, i) => (
                   <motion.button
                     key={i}
                     ref={(el) => (cellsRef.current[i] = el)}
                     onClick={() => handleClick(i)}
                     whileTap={{ scale: 0.95 }}
-                    className={`ttt-cell relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl font-extrabold rounded-lg ${themeDark ? 'bg-white/5' : 'bg-black/2'} border ${cellBorder} transition-transform ${!cell && !gameOver ? 'hover:scale-105 cursor-pointer' : 'opacity-90 cursor-default'} focus:outline-none`}
+                    className={`ttt-cell relative w-21 md:ml-0 py-2 h-21 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl font-extrabold rounded-lg ${themeDark ? 'bg-white/5' : 'bg-black/2'} border ${cellBorder} transition-transform ${!cell && !gameOver ? 'hover:scale-105 cursor-pointer' : 'opacity-90 cursor-default'} focus:outline-none`}
                     aria-label={`Cell ${i + 1}`}
                     disabled={!!cell || !!gameOver || (mode === 'computer' && !xIsNext)}
                   >
