@@ -9,7 +9,28 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { MotionConfig, motion } from "framer-motion";
 import Confetti from "react-confetti";
-import { FaCrown, FaLinkedin } from "react-icons/fa";
+import { 
+  FaCrown, 
+  FaLinkedin, 
+  FaTimes, 
+  FaCircle, 
+  FaUndo, 
+  FaRedo, 
+  FaMoon, 
+  FaSun, 
+  FaVolumeUp, 
+  FaVolumeMute,
+  FaUserFriends,
+  FaLaptop,
+  FaGlobe,
+  FaRobot,
+  FaHistory,
+  FaPlay,
+  FaStop,
+  FaLightbulb,
+  FaStepForward,
+  FaTrophy
+} from "react-icons/fa";
 
 /* ---------- Game Logic ---------- */
 const WIN_COMBOS = [
@@ -135,88 +156,55 @@ const GlassIcon = ({ children, className = "" }) => (
 
 const TimesIcon = ({ className = "", themeDark }) => (
   <GlassIcon className={className}>
-    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
-      <line x1="18" y1="6" x2="6" y2="18"></line>
-      <line x1="6" y1="6" x2="18" y2="18"></line>
-    </svg>
+    <FaTimes color={themeDark ? "#ffffff" : "#000000"} />
   </GlassIcon>
 );
 
 const CircleIcon = ({ className = "", themeDark }) => (
   <GlassIcon className={className}>
-    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2">
-      <circle cx="12" cy="12" r="9"></circle>
-    </svg>
+    <FaCircle color={themeDark ? "#ffffff" : "#000000"} />
   </GlassIcon>
 );
 
 const UndoIcon = ({ className = "", themeDark }) => (
   <GlassIcon className={className}>
-    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
-      <path d="M3 10h10a8 8 0 0 1 8 8v0a8 8 0 0 1-8 8H1"></path>
-      <polyline points="3,10 9,4 3,4"></polyline>
-    </svg>
+    <FaUndo color={themeDark ? "#ffffff" : "#000000"} />
   </GlassIcon>
 );
 
 const RedoIcon = ({ className = "", themeDark }) => (
   <GlassIcon className={className}>
-    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
-      <path d="M21 10H11a8 8 0 0 0-8 8v0a8 8 0 0 0 8 8h12"></path>
-      <polyline points="21,10 15,4 21,4"></polyline>
-    </svg>
+    <FaRedo color={themeDark ? "#ffffff" : "#000000"} />
   </GlassIcon>
 );
 
 const MoonIcon = ({ className = "", themeDark }) => (
   <GlassIcon className={className}>
-    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-    </svg>
+    <FaMoon color={themeDark ? "#ffffff" : "#000000"} />
   </GlassIcon>
 );
 
 const SunIcon = ({ className = "", themeDark }) => (
   <GlassIcon className={className}>
-    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
-      <circle cx="12" cy="12" r="5"></circle>
-      <line x1="12" y1="1" x2="12" y2="3"></line>
-      <line x1="12" y1="21" x2="12" y2="23"></line>
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-      <line x1="1" y1="12" x2="3" y2="12"></line>
-      <line x1="21" y1="12" x2="23" y2="12"></line>
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-    </svg>
+    <FaSun color={themeDark ? "#ffffff" : "#000000"} />
   </GlassIcon>
 );
 
 const VolumeUpIcon = ({ className = "", themeDark }) => (
   <GlassIcon className={className}>
-    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-    </svg>
+    <FaVolumeUp color={themeDark ? "#ffffff" : "#000000"} />
   </GlassIcon>
 );
 
 const VolumeMuteIcon = ({ className = "", themeDark }) => (
   <GlassIcon className={className}>
-    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-      <line x1="23" y1="9" x2="17" y2="15"></line>
-      <line x1="17" y1="9" x2="23" y2="15"></line>
-    </svg>
+    <FaVolumeMute color={themeDark ? "#ffffff" : "#000000"} />
   </GlassIcon>
 );
 
 const CrownIcon = ({ className = "", themeDark }) => (
   <GlassIcon className={className}>
-    <svg viewBox="0 0 24 24" fill="none" stroke={themeDark ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round">
-      <path d="M12 4L8 10 12 14 16 10 12 4z"></path>
-      <path d="M2 10h20v10H2z"></path>
-    </svg>
+    <FaCrown color={themeDark ? "#ffffff" : "#000000"} />
   </GlassIcon>
 );
 
@@ -332,8 +320,8 @@ export default function TicTacToeProSingle() {
     tl.fromTo(".ttt-board .ttt-cell",
       {
         opacity: 0,
-        scale: 1,
-        rotation: 0,
+        scale: 0.8,
+        rotation: -10,
         y: 20
       },
       {
@@ -416,22 +404,15 @@ export default function TicTacToeProSingle() {
       gsap.fromTo(el,
         {
           scale: 0.8,
-          boxShadow: themeDark ? "0 0 20px rgba(255,255,255,0.3)" : "0 0 20px rgba(0,0,0,0.3)"
         },
         {
           scale: 1,
-          boxShadow: "none",
           duration: 0.4,
           ease: "back.out(1.6)"
         }
       );
 
-      // subtle ripple
-      const ripple = document.createElement("span");
-      ripple.className = "ripple absolute rounded-full pointer-events-none";
-      el.appendChild(ripple);
-      gsap.set(ripple, { width: 10, height: 10, opacity: 0.12, background: themeDark ? "#ffffff" : "#000000", xPercent: -50, yPercent: -50 });
-      gsap.to(ripple, { width: 220, height: 220, opacity: 0, duration: 0.7, ease: "power2.out", onComplete: () => ripple.remove() });
+
     }
     return true;
   }
@@ -543,7 +524,7 @@ export default function TicTacToeProSingle() {
 
   // UI helpers (black & white)
   const bgClasses = themeDark ? "bg-black text-white" : "bg-white text-black";
-  const cardBg = themeDark ? "bg-white/35 backdrop-blur-md" : "bg-black/6 backdrop-blur-md";
+  const cardBg = themeDark ? "bg-white/10 backdrop-blur-xl border border-white/10" : "bg-white/80 backdrop-blur-xl border border-black/10";
   const cellBorder = themeDark ? "border-white/12" : "border-black/12";
   const iconColor = themeDark ? "#ffffff" : "#000000";
 
@@ -554,6 +535,13 @@ export default function TicTacToeProSingle() {
         {/* Star Background */}
         <StarBackground themeDark={themeDark} />
 
+        {/* Confetti canvas (react-confetti) - behind the card */}
+        {gameOver?.winner && gameOver.winner !== 'draw' && (
+          <div className="absolute inset-0 z-10 pointer-events-none">
+            <Confetti recycle={false} numberOfPieces={220} />
+          </div>
+        )}
+
         {/* subtle glass particles */}
         <div className="absolute inset-0 pointer-events-none z-0">
           {[...Array(12)].map((_, i) => (
@@ -562,16 +550,18 @@ export default function TicTacToeProSingle() {
         </div>
 
         <div className="absolute inset-0 bg-grid-pattern opacity-10 dark:opacity-5 pointer-events-none" />
-        <div className="border border-gray-300/60 bg-white/30 p-2 md:p-4 dark:bg-indigo-400/25 dark:shadow-[0_0_70px_rgba(124,58,237,0.2)] rounded-2xl backdrop-blur-sm">
-
-          <div className={`glass-card ${cardBg} rounded-3xl shadow-2xl border ${cellBorder} p-4 md:p-6 dark:bg-gray-900 dark:shadow-[0_0_70px_rgba(124,58,237,10)] rounded-xl shadow-md relative z-20 w-full max-w-4xl`}>
+        
+        {/* Outer card with glass effect */}
+        <div className="border border-gray-300/60 bg-white/3 p-2 md:p-4 dark:bg-indigo-400/2 dark:shadow-[0_0_70px_rgba(124,58,237,0.2)] z-10 rounded-2xl backdrop-blur-sm">
+          {/* Inner card with glass effect */}
+          <div className={`glass-card ${cardBg} rounded-3xl shadow-2xl border ${cellBorder} p-4 md:p-6 dark:shadow-[0_0_70px_rgba(124,58,237,10)] rounded-xl relative z-20 w-full max-w-4xl`}>
 
             <div className="flex flex-col md:flex-row md:items-center text-black dark:text-white justify-between mb-4 gap-3">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-xl ${themeDark ? 'bg-white/8' : 'bg-black/8'} border ${cellBorder}`}>
-                  <FaCrown themeDark={themeDark} />
+                  <FaCrown color={themeDark ? "#ffffff" : "#000000"} />
                 </div>
-                <h1 className={`ttt-title text-xl md:text-2xl font-bold tracking-tight ${themeDark ? 'text-white' : 'text-white'}`}>Tic Tac Toe</h1>
+                <h1 className={`ttt-title text-xl md:text-2xl font-bold tracking-tight ${themeDark ? 'text-white' : 'text-black'}`}>Tic Tac Toe</h1>
               </div>
 
               <div className="flex items-center gap-2 self-end md:self-auto">
@@ -587,48 +577,69 @@ export default function TicTacToeProSingle() {
             {/* Controls */}
             <div className="flex flex-col md:flex-row md:flex-wrap text-black dark:text-white items-stretch md:items-center gap-3 mb-6 ttt-panel">
               <div className="flex gap-2 flex-wrap">
-                <label className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer ${themeDark ? 'bg-white/6' : 'bg-white/60'}`}>
-                  <input type="radio" checked={mode === "two-player"} onChange={() => { setMode("two-player"); restartRound(); }} />
-                  <span className={themeDark ? 'text-white' : 'text-black'}>Hotseat</span>
-                </label>
-                <label className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer ${themeDark ? 'bg-white/6' : 'bg-white/60'}`}>
-                  <input type="radio" checked={mode === "computer"} onChange={() => { setMode("computer"); restartRound(); }} />
-                  <span className={themeDark ? 'text-white' : 'text-black'}>Vs Computer</span>
-                </label>
-                <label className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer ${themeDark ? 'bg-white/6' : 'bg-white/60'}`}>
-                  <input type="radio" checked={mode === "online"} onChange={() => { setMode("online"); restartRound(); }} />
-                  <span className={themeDark ? 'text-white' : 'text-black'}>Online</span>
-                </label>
+                <button 
+                  onClick={() => { setMode("two-player"); restartRound(); }} 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md ${mode === "two-player" ? (themeDark ? 'bg-white/20 text-white' : 'bg-black/20 text-black') : (themeDark ? 'bg-white/6 hover:bg-white/10' : 'bg-black hover:bg-black/70')} transition-colors`}
+                >
+                  <FaUserFriends size={14} />
+                  <span>Hotseat</span>
+                </button>
+                <button 
+                  onClick={() => { setMode("computer"); restartRound(); }} 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md ${mode === "computer" ? (themeDark ? 'bg-white/20 text-white' : 'bg-black/20 text-black') : (themeDark ? 'bg-white/6 hover:bg-white/10' : 'bg-black hover:bg-black/70')} transition-colors`}
+                >
+                  <FaLaptop size={14} />
+                  <span>Vs Computer</span>
+                </button>
+                <button 
+                  onClick={() => { setMode("online"); restartRound(); }} 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md ${mode === "online" ? (themeDark ? 'bg-white/20 text-white' : 'bg-black/20 text-black') : (themeDark ? 'bg-white/6 hover:bg-white/10' : 'bg-black hover:bg-black/70')} transition-colors`}
+                >
+                  <FaGlobe size={14} />
+                  <span>Online</span>
+                </button>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
-                <select value={difficulty} onChange={(e) => { setDifficulty(e.target.value); restartRound(); }} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/6' : 'bg-black/6'}`}>
+                <select value={difficulty} onChange={(e) => { setDifficulty(e.target.value); restartRound(); }} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/6 text-black' : 'bg-black text-white'} focus:outline-none focus:ring-0`}>
                   <option value="easy">Easy</option>
                   <option value="medium">Medium</option>
                   <option value="hard">Hard</option>
                 </select>
 
-                <button onClick={() => restartRound()} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/8 text-white' : 'bg-black text-white'}`}>Restart</button>
-                <button onClick={() => { setStats({ X: 0, O: 0, draw: 0, matches: 0 }); localStorage.removeItem('ttt_stats'); }} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/8 text-white' : 'bg-black text-white'}`}>Reset Stats</button>
+                <button onClick={() => restartRound()} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/8 text-white' : 'bg-black text-white'} flex items-center gap-2`}>
+                  <FaPlay size={12} />
+                  Restart
+                </button>
+                <button onClick={() => { setStats({ X: 0, O: 0, draw: 0, matches: 0 }); localStorage.removeItem('ttt_stats'); }} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/8 text-white' : 'bg-black text-white'} flex items-center gap-2`}>
+                  <FaTrophy size={12} />
+                  Reset Stats
+                </button>
 
-                <button onClick={() => undo()} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/6' : 'bg-white/10'} flex items-center gap-2`}><UndoIcon themeDark={themeDark} /><span className="hidden md:inline">Undo</span></button>
-                <button onClick={() => redo()} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/6' : 'bg-white/10'} flex items-center gap-2`}><RedoIcon themeDark={themeDark} /><span className="hidden md:inline">Redo</span></button>
+                <button onClick={() => undo()} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/6' : 'bg-black'} flex items-center gap-2`}><FaUndo themeDark={themeDark} /><span className="hidden md:inline">Undo</span></button>
+                <button onClick={() => redo()} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/6' : 'bg-black'} flex items-center gap-2`}><FaRedo themeDark={themeDark} /><span className="hidden md:inline">Redo</span></button>
 
-                <button onClick={() => setReplay(true)} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/8 text-white' : 'bg-black text-white'}`}>Replay</button>
-                <button onClick={() => setAutoPlay((s) => !s)} className={`px-3 py-2 rounded-md ${autoPlay ? 'bg-red-600 text-white' : themeDark ? 'bg-white/6' : 'bg-black/6'}`}>{autoPlay ? 'Stop' : 'AI Auto'}</button>
+                <button onClick={() => setReplay(true)} className={`px-3 py-2 rounded-md ${themeDark ? 'bg-white/8 text-white' : 'bg-black text-white'} flex items-center gap-2`}>
+                  <FaHistory size={12} />
+                  Replay
+                </button>
+                <button onClick={() => setAutoPlay((s) => !s)} className={`px-3 py-2 rounded-md ${autoPlay ? 'bg-red-600 text-white' : themeDark ? 'bg-white/6' : 'bg-black'} flex items-center gap-2`}>
+                  {autoPlay ? <FaStop size={12} /> : <FaRobot size={12} />}
+                  {autoPlay ? 'Stop' : 'AI Auto'}
+                </button>
               </div>
             </div>
 
             <div className="flex flex-col md:flex-row gap-6 items-start">
               {/* Board */}
-              <div className={`ttt-board grid grid-cols-3 items-center justify-center mx-auto  md:mt-15 gap-3 md:gap-4 p-3 md:p-5 rounded-xl ${themeDark ? 'bg-black/10' : 'bg-white/8'} ${cellBorder} w-full md:w-auto`} ref={boardRef}>
+              <div className={`ttt-board grid grid-cols-3 items-center justify-center mx-auto md:mt-15 gap-3 md:gap-4 p-3 md:p-5 rounded-xl ${themeDark ? 'bg-black/10' : 'bg-black/5'} ${cellBorder} w-full md:w-auto`} ref={boardRef}>
                 {board.map((cell, i) => (
                   <motion.button
                     key={i}
                     ref={(el) => (cellsRef.current[i] = el)}
                     onClick={() => handleClick(i)}
                     whileTap={{ scale: 0.95 }}
-                    className={`ttt-cell relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl font-extrabold rounded-lg ${themeDark ? 'bg-black/60' : 'bg-white/40'} border ${cellBorder} transition-transform ${!cell && !gameOver ? 'hover:scale-105 cursor-pointer' : 'opacity-90 cursor-default'}`}
+                    className={`ttt-cell relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl font-extrabold rounded-lg ${themeDark ? 'bg-white/5' : 'bg-black/2'} border ${cellBorder} transition-transform ${!cell && !gameOver ? 'hover:scale-105 cursor-pointer' : 'opacity-90 cursor-default'} focus:outline-none`}
                     aria-label={`Cell ${i + 1}`}
                     disabled={!!cell || !!gameOver || (mode === 'computer' && !xIsNext)}
                   >
@@ -649,8 +660,8 @@ export default function TicTacToeProSingle() {
 
               {/* Sidebar */}
               <div className="flex-1 min-w-0 w-full md:min-w-[240px]">
-                <div className="mb-3 ttt-panel">
-                  <div className={`p-3 rounded-lg ${themeDark ? 'bg-black/10' : 'bg-white/50'} border ${cellBorder}`}>
+                <div className="mb-2 ttt-panel">
+                  <div className={`p-3 rounded-lg ${themeDark ? 'bg-white/5' : 'bg-white/50'} border ${cellBorder}`}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${xIsNext ? (themeDark ? 'bg-white' : 'bg-black') : (themeDark ? 'bg-white/50' : 'bg-black/50')}`} />
@@ -676,70 +687,89 @@ export default function TicTacToeProSingle() {
                   </div>
                 </div>
 
-                <div className="mb-3 ttt-panel">
-                  <div className={`p-3 rounded-lg ${themeDark ? 'bg-black/10' : 'bg-white/50'} border ${cellBorder}`}>
+                <div className="mb-2 ttt-panel">
+                  <div className={`p-3 rounded-lg ${themeDark ? 'bg-white/5' : 'bg-white/50'} border ${cellBorder}`}>
                     <div className="flex items-center justify-between mb-2"><strong className={themeDark ? 'text-white' : 'text-black'}>History</strong><small className={`text-sm ${themeDark ? 'text-white/60' : 'text-black/60'}`}>Step {step}/{history.length - 1}</small></div>
-                    <input type="range" min={0} max={history.length - 1} value={step} onChange={(e) => { const s = Number(e.target.value); setStep(s); setBoard(history[s]); setGameOver(null); }} className="w-full" />
+                    <input 
+                      type="range" 
+                      min={0} 
+                      max={history.length - 1} 
+                      value={step} 
+                      onChange={(e) => { const s = Number(e.target.value); setStep(s); setBoard(history[s]); setGameOver(null); }} 
+                      className="w-full focus:outline-none focus:ring-0"
+                    />
 
                     <div className="mt-2 flex flex-wrap gap-2">
                       {history.map((h, idx) => (
-                        <button key={idx} onClick={() => { setStep(idx); setBoard(history[idx]); setGameOver(null); }} className={`px-2 py-1 text-sm rounded ${idx === step ? (themeDark ? 'bg-white text-black' : 'bg-black text-white') : (themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black')}`}>#{idx}</button>
+                        <button 
+                          key={idx} 
+                          onClick={() => { setStep(idx); setBoard(history[idx]); setGameOver(null); }} 
+                          className={`px-2 py-1 text-sm rounded ${idx === step ? (themeDark ? 'bg-white text-black' : 'bg-black text-white') : (themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black')} focus:outline-none`}
+                        >
+                          #{idx}
+                        </button>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="mb-3 ttt-panel">
-                  <div className={`p-3 rounded-lg ${themeDark ? 'bg-black/10' : 'bg-white/50'} border ${cellBorder}`}>
+                <div className="mb-2 ttt-panel">
+                  <div className={`p-3 rounded-lg ${themeDark ? 'bg-white/5' : 'bg-white/50'} border ${cellBorder}`}>
                     <div className="flex items-center justify-between mb-2"><strong className={themeDark ? 'text-white' : 'text-black'}>Options</strong></div>
                     <div className="flex gap-2 flex-wrap">
-                      <button onClick={() => soundOn && play('move')} className={`px-3 py-2 rounded ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'}`}>Test Move</button>
-                      <button onClick={() => { setReplay(true); }} className={`px-3 py-2 rounded ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'}`}>Replay Match</button>
-                      <button onClick={() => { setBoard(history[history.length - 1]); setStep(history.length - 1); }} className={`px-3 py-2 rounded ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'}`}>Jump to End</button>
-                      <button onClick={() => { /* hint noop */ }} className={`px-3 py-2 rounded ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'}`}>Hint</button>
+                      <button onClick={() => soundOn && play('move')} className={`px-3 py-2 rounded ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'} flex items-center gap-2 focus:outline-none`}>
+                        <FaVolumeUp size={12} />
+                        Test Sound
+                      </button>
+                      <button onClick={() => { setReplay(true); }} className={`px-3 py-2 rounded ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'} flex items-center gap-2 focus:outline-none`}>
+                        <FaHistory size={12} />
+                        Replay
+                      </button>
+                      <button onClick={() => { setBoard(history[history.length - 1]); setStep(history.length - 1); }} className={`px-3 py-2 rounded ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'} flex items-center gap-2 focus:outline-none`}>
+                        <FaStepForward size={12} />
+                        Jump to End
+                      </button>
+                      <button onClick={() => { /* hint noop */ }} className={`px-3 py-2 rounded ${themeDark ? 'bg-white/6 text-white' : 'bg-black/6 text-black'} flex items-center gap-2 focus:outline-none`}>
+                        <FaLightbulb size={12} />
+                        Hint
+                      </button>
                     </div>
                   </div>
                 </div>
 
-                <div className="mb-3 ttt-panel">
-                  <div className={`p-3 rounded-lg ${themeDark ? 'bg-black/10' : 'bg-white/50'} border ${cellBorder}`}>
+                <div className="mb-2 ttt-panel">
+                  <div className={`p-3 rounded-lg ${themeDark ? 'bg-white/5' : 'bg-white/50'} border ${cellBorder}`}>
                     <strong className={themeDark ? 'text-white' : 'text-black'}>Leaderboard</strong>
                     <div className={`mt-2 text-sm ${themeDark ? 'text-white/60' : 'text-black/60'}`}>Matches: {stats.matches} • X win%: {percent(stats.X, stats.matches)} • O win%: {percent(stats.O, stats.matches)}</div>
                   </div>
                 </div>
 
-                <div className={`text-xs ${themeDark ? 'text-white' : 'text-white'}`}>Controls: keys 1-9 to play, Ctrl/Cmd+Z undo, R restart.</div>
               </div>
             </div>
-
+                      
             {/* win/draw banner */}
             <div className="mt-6 flex items-center flex-row justify-center">
               {gameOver && (
                 <div className={`px-4 py-2 rounded-full ${themeDark ? 'bg-white/8 text-white' : 'bg-black text-white'}`}>{gameOver.winner === 'draw' ? 'It\'s a Draw!' : `${gameOver.winner} Wins!`}</div>
               )}
             </div>
+
+
               <div className="h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent w-full mt-2 md:mt-2 origin-left">
               </div>
-            <br />
-            <footer className="mt-6 flex items-center text-black dark:text-white justify-center gap-5 text-center text-sm opacity-80">
+            <footer className="mt-6 flex items-center  justify-center gap-5 text-center text-sm opacity-80">
               copyright &copy; {new Date().getFullYear()} {" "}
               <a
                 href="https://linkedin.com/in/nagaruthwikmerugu/"
                 target="_blank"
                 rel="noreferrer"
-                className={`underline flex items-center text-black dark:text-white  justify-center gap-2 ${themeDark ? "text-white" : "text-black"}`}
+                className={`underline flex items-center   justify-center gap-2 ${themeDark ? "text-white" : "text-black"}`}
               >
                 <FaLinkedin/> Nagaruthwik Merugu
               </a>
             </footer>
           </div>
-
         </div>
-
-
-
-        {/* Confetti canvas (react-confetti) */}
-        {gameOver?.winner && gameOver.winner !== 'draw' && <Confetti recycle={false} numberOfPieces={220} />}
 
         {/* CSS for star animation */}
         <style jsx>{`
